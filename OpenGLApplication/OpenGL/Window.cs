@@ -1,12 +1,12 @@
 ﻿using System;
-using LearnOpenTK.Common;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 using OpenTK.Windowing.Common;
 using OpenTK.Windowing.GraphicsLibraryFramework;
 using OpenTK.Windowing.Desktop;
+using System.Collections.Generic;
 
-namespace LearnOpenTK
+namespace OpenGLProject
 {
     // We now have a rotating rectangle but how can we make the view move based on the users input?
     // In this tutorial we will take a look at how you could implement a camera class
@@ -19,20 +19,20 @@ namespace LearnOpenTK
     // as if the view itself was moved.
     public class Window : GameWindow
     {
-        private readonly float[] _vertices =
-        {
-            // Position         Texture coordinates
-             0.5f,  0.5f, 0.0f, 1.0f, 1.0f, // top right
-             0.5f, -0.5f, 0.0f, 1.0f, 0.0f, // bottom right
-            -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, // bottom left
-            -0.5f,  0.5f, 0.0f, 0.0f, 1.0f  // top left
-        };
+        //private readonly float[] _vertices =
+        //{
+        //    // Position         Texture coordinates
+        //     0.5f,  0.5f, 0.0f, 1.0f, 1.0f, // top right
+        //     0.5f, -0.5f, 0.0f, 1.0f, 0.0f, // bottom right
+        //    -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, // bottom left
+        //    -0.5f,  0.5f, 0.0f, 0.0f, 1.0f  // top left
+        //};
 
-        private readonly uint[] _indices =
-        {
-            0, 1, 3,
-            1, 2, 3
-        };
+        //private readonly uint[] _indices =
+        //{
+        //    0, 1, 3,
+        //    1, 2, 3
+        //};
 
         private int _elementBufferObject;
 
@@ -60,9 +60,16 @@ namespace LearnOpenTK
 
         private double _time;
 
+        List<Cube> CubeList = new List<Cube>();
+        //Cube TestCube { get; set; }
+
         public Window(GameWindowSettings gameWindowSettings, NativeWindowSettings nativeWindowSettings)
             : base(gameWindowSettings, nativeWindowSettings)
         {
+
+            CubeList.Add(new Cube(0f, 0f, 0f));
+            CubeList.Add(new Cube(3.0f, 3.0f, 3.0f, 0.5f, 2f, 1.5f));
+
         }
 
         protected override void OnLoad()
@@ -73,27 +80,31 @@ namespace LearnOpenTK
 
             GL.Enable(EnableCap.DepthTest);
 
-            _vertexArrayObject = GL.GenVertexArray();
-            GL.BindVertexArray(_vertexArrayObject);
+            foreach (var cube in CubeList)
+            {
 
-            _vertexBufferObject = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, _vertexBufferObject);
-            GL.BufferData(BufferTarget.ArrayBuffer, _vertices.Length * sizeof(float), _vertices, BufferUsageHint.StaticDraw);
+                cube._vertexArrayObject = GL.GenVertexArray();
+                GL.BindVertexArray(cube._vertexArrayObject);
 
-            _elementBufferObject = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ElementArrayBuffer, _elementBufferObject);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, _indices.Length * sizeof(uint), _indices, BufferUsageHint.StaticDraw);
+                cube._vertexBufferObject = GL.GenBuffer();
+                GL.BindBuffer(BufferTarget.ArrayBuffer, cube._vertexBufferObject);
+                GL.BufferData(BufferTarget.ArrayBuffer, cube._vertices.Length * sizeof(float), cube._vertices, BufferUsageHint.StaticDraw);
 
-            _shader = new Shader("Shaders/shader.vert", "Shaders/shader.frag");
-            _shader.Use();
+                cube._elementBufferObject = GL.GenBuffer();
+                GL.BindBuffer(BufferTarget.ElementArrayBuffer, cube._elementBufferObject);
+                GL.BufferData(BufferTarget.ElementArrayBuffer, cube._indices.Length * sizeof(uint), cube._indices, BufferUsageHint.StaticDraw);
 
-            var vertexLocation = _shader.GetAttribLocation("aPosition");
-            GL.EnableVertexAttribArray(vertexLocation);
-            GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
+                this._shader = new Shader("Shaders/shader.vert", "Shaders/shader.frag");
+                this._shader.Use();
 
-            var texCoordLocation = _shader.GetAttribLocation("aTexCoord");
-            GL.EnableVertexAttribArray(texCoordLocation);
-            GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
+                var vertexLocation = _shader.GetAttribLocation("aPosition");
+                GL.EnableVertexAttribArray(vertexLocation);
+                GL.VertexAttribPointer(vertexLocation, 3, VertexAttribPointerType.Float, false, 5 * sizeof(float), 0);
+
+                var texCoordLocation = _shader.GetAttribLocation("aTexCoord");
+                GL.EnableVertexAttribArray(texCoordLocation);
+                GL.VertexAttribPointer(texCoordLocation, 2, VertexAttribPointerType.Float, false, 5 * sizeof(float), 3 * sizeof(float));
+            }
 
             _texture = Texture.LoadFromFile("Resources/container.png");
             _texture.Use(TextureUnit.Texture0);
@@ -116,25 +127,29 @@ namespace LearnOpenTK
         {
             base.OnRenderFrame(e);
 
-            _time += 120.0 * e.Time;
-
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
 
-            GL.BindVertexArray(_vertexArrayObject);
+            //           _time += 120.0 * e.Time;
 
-            _texture.Use(TextureUnit.Texture0);
-            _texture2.Use(TextureUnit.Texture1);
-            _shader.Use();
+            foreach (var cube in CubeList)
+            {
 
-            // An arbitrary rotation
-            var model = Matrix4.Identity * Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(_time));
+                GL.BindVertexArray(cube._vertexArrayObject);
 
+                //_texture.Use(TextureUnit.Texture0);
+                //_texture2.Use(TextureUnit.Texture1);
+                _shader.Use();
 
-            _shader.SetMatrix4("model", model);
-            _shader.SetMatrix4("view", _camera.GetViewMatrix());
-            _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+                // An arbitrary rotation
+                //            var model = Matrix4.Identity * Matrix4.CreateRotationX((float)MathHelper.DegreesToRadians(_time));
+                var model = Matrix4.Identity;
 
-            GL.DrawElements(PrimitiveType.Triangles, _indices.Length, DrawElementsType.UnsignedInt, 0);
+                _shader.SetMatrix4("model", model);
+                _shader.SetMatrix4("view", _camera.GetViewMatrix());
+                _shader.SetMatrix4("projection", _camera.GetProjectionMatrix());
+
+                GL.DrawElements(PrimitiveType.Triangles, cube._indices.Length, DrawElementsType.UnsignedInt, 0);
+            }
 
             SwapBuffers();
         }
@@ -155,7 +170,7 @@ namespace LearnOpenTK
                 Close();
             }
 
-            const float cameraSpeed = 1.5f;
+            const float cameraSpeed = 5.0f;
             const float sensitivity = 0.05f;
 
             if (input.IsKeyDown(Keys.W))
